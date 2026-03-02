@@ -118,10 +118,10 @@ with open(settings_path, 'w', encoding='utf-8') as f:
 print('  Hooks 配置已写入:', settings_path)
 "
 
-# 6. 创建 /task slash command
-echo "→ 创建 /task slash command"
+# 6. 创建 /myTask slash command
+echo "→ 创建 /myTask slash command"
 mkdir -p "$PROJECT_DIR/.claude/commands"
-cat > "$PROJECT_DIR/.claude/commands/task.md" << 'EOF'
+cat > "$PROJECT_DIR/.claude/commands/myTask.md" << 'EOF'
 Read the current task context and continue working:
 
 <context>
@@ -144,7 +144,7 @@ echo ""
 echo "  命令位置: $(which agent 2>/dev/null || echo ~/.local/bin/agent)"
 echo "  数据库:   {项目目录}/.task-agent/{git用户名}/tasks.db"
 echo "  Hooks:    已配置 SessionStart + PostToolUse
-  命令:     /task（在 Claude Code 中输入）"
+  命令:     /myTask（在 Claude Code 中输入）"
 echo ""
 echo "  快速开始:"
 echo "    agent status              # 查看状态"
