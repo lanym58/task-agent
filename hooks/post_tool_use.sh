@@ -1,12 +1,18 @@
 #!/bin/bash
 # PostToolUse Hook - 异步活动日志记录
 # 每次工具调用完成后触发，记录操作到 activity_log
-# 不阻塞 Claude Code 执行
 INPUT=$(cat)
+
+# 跳过交互类工具，这些工具不需要记录且可能引发 hook error
+TOOL_NAME=$(echo "$INPUT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('tool_name',''))" 2>/dev/null)
+case "$TOOL_NAME" in
+    AskUserQuestion|ExitPlanMode|EnterPlanMode|"")
+        exit 0
+        ;;
+esac
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-# 切换到 agent 目录以确保正确的工作目录
-cd "$SCRIPT_DIR/.." || { echo "{}"; exit 0; }
-echo "$INPUT" | python3 agent.py log-tool 2>/dev/null
-# PostToolUse 钩子需要返回 JSON（即使是空的）
-echo "{}"
+cd "$SCRIPT_DIR/.." || exit 0
+# 同时重定向 stdout 和 stderr，避免污染 hook 响应
+echo "$INPUT" | python3 agent.py log-tool >/dev/null 2>/dev/null
 exit 0
