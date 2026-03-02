@@ -6,9 +6,14 @@
 """
 
 import os
+import sys as _sys
 # Fix encoding for Windows
 if os.name == 'nt':
     os.environ['PYTHONIOENCODING'] = 'utf-8'
+    os.environ['PYTHONUTF8'] = '1'
+    for _s in (_sys.stdout, _sys.stderr):
+        if hasattr(_s, 'reconfigure'):
+            _s.reconfigure(encoding='utf-8', errors='replace')
 
 import argparse
 import json
