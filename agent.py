@@ -395,12 +395,45 @@ class TaskManager:
         self._log(task["id"], None, "status_change", "Task archived via restart")
         return task
 
-    # ── Xiaocheng (Milestone) ──
+    # ── XC (Milestone) ──
 
-    def xiaocheng(self, summary=None, project_dir=None):
+    def _write_worklog(self, task, summary, project_dir):
+        """Write work log entry to docs/worklogs/YYYY-MM-DD.md"""
+        if not project_dir:
+            return
+        now = datetime.now()
+        log_dir = Path(project_dir) / "docs" / "worklogs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        log_file = log_dir / f"{now.strftime('%Y-%m-%d')}.md"
+
+        lines = []
+        if log_file.exists():
+            lines.append("\n---\n")
+        lines.append(f"## {now.strftime('%H:%M:%S')}")
+        if task:
+            lines.append(f"**任务**: #{task['id']} {task['title']}")
+        if summary:
+            lines.append(f"**总结**: {summary}")
+        if task:
+            lines.append(f"**状态**: {task['status']} → completed")
+            steps = self.get_steps(task["id"])
+            if steps:
+                lines.append("**步骤**:")
+                for s in steps:
+                    mark = "✅" if s["status"] == "completed" else "⬜"
+                    lines.append(f"- {mark} {s['title']} ({s['progress']}%)")
+        lines.append("")
+
+        with open(log_file, "a", encoding="utf-8") as f:
+            f.write("\n".join(lines) + "\n")
+
+    def xc(self, summary=None, project_dir=None):
         """Commit, push, record milestone, archive task."""
         task = self.get_active_task(project_dir)
         result = {"task": task, "git": {}, "milestone_id": None}
+
+        # 0. Write worklog
+        self._write_worklog(task, summary, project_dir)
 
         # 1. Check git status
         try:
@@ -415,7 +448,7 @@ class TaskManager:
 
         if has_changes:
             # 2. Commit
-            commit_msg = f"xiaocheng: {summary}" if summary else "xiaocheng: milestone checkpoint"
+            commit_msg = f"xc: {summary}" if summary else "xc: milestone checkpoint"
             try:
                 subprocess.run(["git", "add", "-A"], capture_output=True, cwd=project_dir)
                 commit_result = subprocess.run(
@@ -534,7 +567,7 @@ class TaskManager:
                 "UPDATE tasks SET status='completed', progress=100, summary=?, updated_at=? WHERE id=?",
                 (milestone_summary, now, task["id"]),
             )
-            self._log(task["id"], None, "status_change", f"Task completed via xiaocheng: {milestone_summary}")
+            self._log(task["id"], None, "status_change", f"Task completed via xc: {milestone_summary}")
 
         return result
 
@@ -724,8 +757,8 @@ class Renderer:
         lines.append("\u2550" * 54)
         return "\n".join(lines)
 
-    def render_xiaocheng(self, result):
-        """Render xiaocheng milestone report."""
+    def render_xc(self, result):
+        """Render xc milestone report."""
         lines = []
         lines.append("\u2550" * 54)
         lines.append("  \U0001f389 \u5c0f\u6210\uff01")
@@ -845,8 +878,8 @@ def build_parser():
     # ── restart ──
     sub.add_parser("restart", help="\u5f52\u6863\u5f53\u524d\u4efb\u52a1\uff0c\u91cd\u65b0\u5f00\u59cb")
 
-    # ── xiaocheng ──
-    p = sub.add_parser("xiaocheng", help="\u5c0f\u6210\uff1a\u63d0\u4ea4+\u63a8\u9001+\u91cc\u7a0b\u7891+\u5f52\u6863")
+    # ── xc ──
+    p = sub.add_parser("xc", help="小成：日志+提交+推送+里程碑+归档")
     p.add_argument("-m", "--message", help="\u53d8\u66f4\u603b\u7ed3")
 
     # ── status ──
@@ -976,10 +1009,10 @@ def main():
             task = tm.restart(project_dir)
             print(renderer.render_restart(task))
 
-        # ── xiaocheng ──
-        elif args.command == "xiaocheng":
-            result = tm.xiaocheng(summary=args.message, project_dir=project_dir)
-            print(renderer.render_xiaocheng(result))
+        # ── xc ──
+        elif args.command == "xc":
+            result = tm.xc(summary=args.message, project_dir=project_dir)
+            print(renderer.render_xc(result))
 
         # ── status ──
         elif args.command == "status":
